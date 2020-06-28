@@ -6,7 +6,7 @@ import keras
 from keras import Input, models
 from keras.layers import Dense, Dropout, Activation, Flatten
 from pathlib import Path
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, CSVLogger
 from keras.models import load_model
 from keras.preprocessing import image
 from keras.utils import to_categorical
@@ -125,12 +125,14 @@ def custom_easy(x_shape,y_shape):
 def custom_advanced(x_shape,y_shape):
     model = Sequential()
     model.add(Conv2D(filters=64, kernel_size=(3, 3), padding="same", activation="relu", input_shape=x_shape))
+    model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
     model.add(Conv2D(filters=64, kernel_size=(3, 3), padding="same", activation="relu"))
     model.add(Conv2D(filters=128, kernel_size=(3, 3), padding="same", activation="relu"))
-    # model.add(Conv2D(filters=128, kernel_size=(3, 3), padding="same", activation="relu"))
+    model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
+    # model.add (Conv2D(filters=128, kernel_size=(3, 3), padding="same", activation="relu"))
     model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
     model.add(Dropout(0.25))
-    model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
+    # model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
     model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
     # model.add(Conv2D(filters=256, kernel_size=(3, 3), padding="same", activation="relu"))
     model.add(MaxPool2D(pool_size=(2, 2), strides=(2, 2)))
@@ -293,27 +295,24 @@ def train_model(setname,modelname,X_images,Y_encoded):
     x_train, x_test, y_train, y_test = train_test_split(X_images, Y_encoded, test_size=0.30, random_state=42)
     model=getmodel(modelname,x_train.shape[1:],y_train.shape[1])
     model.compile(loss='categorical_crossentropy', optimizer="Adam", metrics=['accuracy'])
-    # if (Path('hc_'+modelname+'_'+setname+'.h5').is_file()):
-    #     model.load_weights(tf.train.latest_checkpoint('hc_'+modelname+'_'+setname+'.h5'))
-    es = EarlyStopping(monitor='val_accuracy', mode='max', verbose=1, patience=10)
-    mc = ModelCheckpoint('hc_'+modelname+'_'+setname+'.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
-    history=model.fit(x_train, y_train, batch_size=32, epochs=500, validation_split=0.3, shuffle=True, callbacks=[es, mc])
-    scores = model.evaluate(x_test, y_test, verbose=1)
-    print(scores)
-    print(history)
-    save_folder=basefolder+'saved_model/hc_'+modelname+'_'+setname+'/'
+    save_folder = basefolder + 'saved_model/hc_' + modelname + '_' + setname + '/'
     if(os.path.isdir(save_folder)==False):
         os.makedirs(save_folder)
-        model.save(save_folder+'model.md')
-        csv_file = basefolder + 'saved_model/hc_' + modelname + '_' + setname + '/results.csv';
-        writer=csv.DictWriter(csv_file)
-        plt.clf()
-        plt.plot(history.epoch, history.history['accuracy'], label='accuracy')
-        plt.plot(history.epoch, history.history['val_accuracy'], label='val_accuracy')
-        plt.title(modelname + '_' + setname)
-        plt.legend()
-        plt.savefig(basefolder + 'saved_model/hc_' + modelname + '_' + setname  + '/acc_chart.jpg')
-        model.save(basefolder + 'saved_model/hc_' + modelname + '_' + setname + '/model.md')
+    # if (Path('hc_'+modelname+'_'+setname+'.h5').is_file()):
+    #     model.load_weights(tf.train.latest_checkpoint('hc_'+modelname+'_'+setname+'.h5'))
+    csv_file = basefolder + 'saved_model/hc_' + modelname + '_' + setname + '/results.csv';
+    csv_logger = CSVLogger(csv_file, separator=',')
+    es = EarlyStopping(monitor='val_accuracy', mode='max', verbose=1, patience=10)
+    mc = ModelCheckpoint('checkpoints/hc_ '+modelname+'_'+setname+'.h5', monitor='val_accuracy', mode='max', verbose=1, save_best_only=True)
+    history=model.fit(x_train, y_train, batch_size=32, epochs=500, validation_split=0.3, shuffle=True, callbacks=[es, mc,csv_logger])
+    scores = model.evaluate(x_test, y_test, verbose=1)
+    model.save(save_folder+'model.md')
+    plt.clf()
+    plt.plot(history.epoch, history.history['accuracy'], label='accuracy')
+    plt.plot(history.epoch, history.history['val_accuracy'], label='val_accuracy')
+    plt.title(modelname + '_' + setname)
+    plt.legend()
+    plt.savefig(basefolder + 'saved_model/hc_' + modelname + '_' + setname  + '/acc_chart.jpg')
     del model
     gc.collect()
     K.clear_session()
@@ -324,13 +323,13 @@ training_folder='training_set/'
 scale = (331, 331)
 # models=['vgg']
 models=['vgg','vgg_2','vgg_plus_conv','custom_easy','custom_advanced','resnet','resnet_2','resnet_plus_conv','nas_2', 'nas_plus_conv']
-resnets=['resnet_2','resnet_plus_conv']
-customs=['custom_easy','custom_advanced']
-nas=['nas_2', 'nas_plus_conv']
+# models=['custom_advanced','resnet','resnet_2','resnet_plus_conv','nas_2', 'nas_plus_conv']
+# resnets=['resnet_2','resnet_plus_conv']
+# customs=['custom_easy','custom_advanced']
+# nas=['nas_2', 'nas_plus_conv']
 # models=['resnet_2','resnet_plus_conv']
-models_heavy=['vgg_train','resnet_train']
-# sets=['set 1','set 2', 'set 3']
-sets=['set 4']
+# models_heavy=['vgg_train','resnet_train']
+sets=['set 1','set 2', 'set 3', 'set 4']
 for set in sets:
     X = list(Path(basefolder + training_folder + set).glob('*/*'))  # Extract all files in Go ogle folder for training dataset
     Y = list(map(lambda x: x.parts[-2], X))  # Extract the mcat name from the set

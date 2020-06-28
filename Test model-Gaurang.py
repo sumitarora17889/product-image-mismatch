@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from keras.preprocessing import image
 import warnings
-scale = (150, 150)
+scale = (331, 331)
 basefolder = 'C:/Users/sumit/PycharmProjects/Product image mismatch/'
 modelfolder= 'saved_model/'
 datasetfolder= 'IndiaMART Image/'
@@ -29,7 +29,7 @@ def evaluatemodelfile(modelname):
     onehot_encoder = OneHotEncoder(sparse=False)
     integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
     Y_encoded = onehot_encoder.fit_transform(integer_encoded)
-    model = models.load_model(basefolder+modelname)
+    model = models.load_model(basefolder+modelfolder+modelname+'/model.md')
     targetfolder=modelname+'/'
     for file in im_files:
         label = file.parts[-2]
@@ -52,8 +52,8 @@ def evaluatemodelfile(modelname):
         image.save_img(save_folder + filename, img_tensor)
 
 for file in os.listdir(basefolder+modelfolder):
-    if os.path.isfile(basefolder+modelfolder+file) & file.count('nas')>0:
-        evaluatemodelfile(modelfolder+file)
+    if os.path.isfile(basefolder+modelfolder+file+'/model.md'):
+        evaluatemodelfile(file)
 # evaluatemodelfile('vgg16_cnn128.h5')
 
 
